@@ -1,0 +1,297 @@
+Description: Creating VPC along with subnets and instances.Supported for Ubuntu AMI and for N.Virginia and Ohio region. An EC2 instance is also povisioned
+Mappings:
+  RegionMap:
+    us-east-1:
+      AZ1: us-east-1a
+      AZ2: us-east-1b
+      AZ3: us-east-1c
+      AZ4: us-east-1d
+      AZ5: us-east-1e
+      AZ6: us-east-1f
+      Ubuntu86: ami-07d0cf3af28718ef8
+      UbuntuArm: ami-0c46f9f09e3a8c2b5
+    us-east-2:
+      AZ1: us-east-2a
+      AZ2: us-east-2b
+      AZ3: us-east-2c
+      Ubuntu86: ami-05c1fa8df71875112
+      UbuntuArm: ami-0606a0d9f566249d3 
+Parameters:
+  VPCName:
+    Description: Enter name for the custom VPC
+    Type: String
+    Default: stackvpc
+  KeyName:
+    Description: The key pair (.pem) which is used for the infrastructure.
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: yasirKP
+    ConstraintDescription: must be a valid and existing key pair name.
+  InstanceType:
+    Description: Describes which type of instance would be provisioned when creating the stack.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+  InstanceProfileName:
+    Description: Enter Instance Profile name
+    Type: String
+    Default: myinstanceprofile
+Resources:
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+  RolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "MyPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action: "*"
+            Resource: "*"
+      Roles:
+        -
+          Ref: "MyRole"
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Ref InstanceProfileName
+      Path: /
+      Roles:
+        -
+          Ref: "MyRole"
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+      - Key: Name
+        Value: !Ref VPCName
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", AZ1]
+      Tags:
+      - Key: Name
+        Value: PublicSubnet1
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", AZ3]
+      Tags:
+      - Key: Name
+        Value: PublicSubnet2
+  # PrivateSubnet:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId:
+  #       Ref: VPC
+  #     CidrBlock: 10.0.2.0/24
+  #     AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", AZ2]
+  #     Tags:
+  #     - Key: Name
+  #       Value: PrivateSubnet
+  # PrivateSubnet2:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId:
+  #       Ref: VPC
+  #     CidrBlock: 10.0.4.0/24
+  #     AvailabilityZone: !FindInMap [RegionMap, !Ref "AWS::Region", AZ3]
+  #     Tags:
+  #     - Key: Name
+  #       Value: PrivateSubnet2
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: yasirInternetGateway
+  GatewaytoInternet:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: PublicRouteTable
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewaytoInternet
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+  # PrivateRouteTable:
+  #   Type: AWS::EC2::RouteTable
+  #   Properties:
+  #     VpcId:
+  #       Ref: VPC
+  #     Tags:
+  #     - Key: Name
+  #       Value: PrivateRouteTable
+  # PrivateRoute:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId:
+  #       Ref: PrivateRouteTable
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId:
+  #       Ref: NAT
+  # NAT:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #     AllocationId:
+  #       !GetAtt ElasticIP.AllocationId
+  #     SubnetId:
+  #       Ref: PublicSubnet1
+  #     Tags:
+  #     - Key: Name
+  #       Value: yasirassignNATGateway
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      RouteTableId:
+        Ref: PublicRouteTable
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      RouteTableId:
+        Ref: PublicRouteTable
+  # PrivateSubnetRouteTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     SubnetId:
+  #       Ref: PrivateSubnet
+  #     RouteTableId:
+  #       Ref: PrivateRouteTable
+  # PrivateSubnetRouteTableAssociation2:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     SubnetId:
+  #       Ref: PrivateSubnet2
+  #     RouteTableId:
+  #       Ref: PrivateRouteTable
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable http ssh and ping for public instance
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: 0.0.0.0/0
+          # SourceSecurityGroupId: !Ref LBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+          # SourceSecurityGroupId: !Ref LBSecurityGroup
+        - IpProtocol: icmp
+          FromPort: '8'
+          ToPort: '-1'
+          CidrIp: 0.0.0.0/0
+          # SourceSecurityGroupId: !Ref LBSecurityGroup
+  PublicEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", Ubuntu86]
+        # Ref: ImageId
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -x 
+          apt-get update -y
+          apt-get upgrade -y
+          apt install awscli -y
+          aws s3 cp s3://yasirassigns3bucketneww/config.json .
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+          #wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          # rpm -U ./amazon-cloudwatch-agent.deb
+          dpkg -i -E ./amazon-cloudwatch-agent.deb
+          mv config.json /opt/aws/amazon-cloudwatch-agent/bin/
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+      NetworkInterfaces:
+      - DeviceIndex: '0'
+        AssociatePublicIpAddress: 'true'
+        DeleteOnTermination: 'true'
+        SubnetId:
+          Ref: PublicSubnet1
+        GroupSet:
+        - Ref: PublicSecurityGroup
+      Tags:
+      - Key: Name
+        Value: PublicInstance
+Outputs:
+  PublicEC2InstanceId:
+    Description: Id of the EC2 Instance
+    Value: !Ref PublicEC2Instance
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicEC2InstanceId
+  PrivateIPEC2:
+    Description: The private IP of the EC2 instance.
+    Value: !GetAtt PublicEC2Instance.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateIPEC2
+
+
+
+
+
+
+
+    
+
+
