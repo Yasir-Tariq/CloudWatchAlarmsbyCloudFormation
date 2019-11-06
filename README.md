@@ -1,5 +1,5 @@
 # CloudWatchAlarmsbyCloudFormation
-Creating CloudWatch Alarms using CloudFormation
+Creating CloudWatch Alarms using CloudFormation and pushing metrics to datadog via datadog agent.
 
 ## Contents
 
@@ -10,6 +10,8 @@ Creating CloudWatch Alarms using CloudFormation
       3. DiskUsed Alarm
     CPUUtilizaion alarm metric is provided by AWS platform and rest of the two metrics are custom based.
     We have used CloudWatch Agent for pushing custom metrics to CloudWatch
+    Moreover, a datadog-agent is also installed in the EC2 instance and the metrics are pushed to datadog
+    immediately using API_Key.
     
 ## Files
     Following are the files for this project:
