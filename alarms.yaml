@@ -29,18 +29,6 @@ Parameters:
     Description: Enter name for the custom VPC
     Type: String
     Default: stackvpc
-  # VolumeDevice:
-  #   Description: Please enter device name
-  #   Type: String
-  #   Default: xvda1
-  # Path:
-  #   Description: Please enter path
-  #   Type: String
-  #   Default: /
-  # fstype:
-  #   Description: Please provide file system type.
-  #   Type: String
-  #   Default: ext4
 Resources:
   #Creating a SNS Topic
   SNSTopic:
