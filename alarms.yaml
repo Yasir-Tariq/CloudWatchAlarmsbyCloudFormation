@@ -1,4 +1,4 @@
-Description: Creating VPC along with subnets and instances.Supported for Ubuntu AMI and for N.Virginia and Ohio region. An EC2 instance is also povisioned
+Description: Creating CloudWatch alarm.
 Mappings:
   RegionMap:
     us-east-1:
@@ -29,6 +29,28 @@ Parameters:
     Description: Enter name for the custom VPC
     Type: String
     Default: stackvpc
+  InstanceType:
+    Description: Describes which type of instance would be provisioned when creating the stack.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+  Device:
+      Description: Please enter device volume name for dimensions.
+      Type: String
+      Default: xvda1
+  fstype:
+      Description: Please enter file system type for dimensions.
+      Type: String
+      Default: ext4
+  Path:
+      Description: Please provide path for dimensions.
+      Type: String
+      Default: /
 Resources:
   #Creating a SNS Topic
   SNSTopic:
@@ -82,13 +104,15 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
       - Name: ImageId
-        Value: ami-05c1fa8df71875112
+        Value: !FindInMap [RegionMap, !Ref "AWS::Region", Ubuntu86]
+        # Value: ami-05c1fa8df71875112
       - Name: InstanceId
         Value:
           Fn::ImportValue:
             Fn::Sub: "${VPCStackName}-PublicEC2InstanceId" 
       - Name: InstanceType
-        Value: t2.micro
+        Value: !Ref InstanceType
+        # Value: t2.micro
   #Creating a disk alarm for threshold greater than 50%
   DiskAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -105,19 +129,21 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
       - Name: ImageId
-        Value: ami-05c1fa8df71875112
+        Value: !FindInMap [RegionMap, !Ref "AWS::Region", Ubuntu86]
+        # Value: ami-05c1fa8df71875112
       - Name: InstanceId
         Value:
           Fn::ImportValue:
             Fn::Sub: "${VPCStackName}-PublicEC2InstanceId"          
       - Name: InstanceType
-        Value: t2.micro
+        Value: !Ref InstanceType
+        # Value: t2.micro
       - Name: device
-        Value: xvda1
+        Value: !Ref Device
       - Name: fstype
-        Value: ext4
+        Value: !Ref fstype
       - Name: path
-        Value: /
+        Value: !Ref Path
 
 
 
